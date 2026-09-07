@@ -192,8 +192,8 @@ export function generateKitchenLayout(
           );
 
           if (candidateIv) {
-            const minStart = candidateIv.start + cornerDeductions[targetWall.id].startBase;
-            const maxStart = candidateIv.end - cornerDeductions[targetWall.id].endBase - sinkWidth;
+            const minStart = Math.max(candidateIv.start, cornerDeductions[targetWall.id].startBase);
+            const maxStart = Math.min(candidateIv.end, targetWall.length - cornerDeductions[targetWall.id].endBase) - sinkWidth;
             if (maxStart >= minStart) {
               sinkStart = Math.max(minStart, Math.min(maxStart, candidateStart));
             }
@@ -205,7 +205,8 @@ export function generateKitchenLayout(
       if (sinkStart < 0) {
         const sorted = [...baseIntervals].sort((a, b) => b.length - a.length);
         if (sorted.length > 0 && sorted[0].length >= sinkWidth) {
-          sinkStart = sorted[0].start + cornerDeductions[targetWall.id].startBase + 100;
+          const ivStart = Math.max(sorted[0].start, cornerDeductions[targetWall.id].startBase);
+          sinkStart = ivStart + 100;
         }
       }
 
@@ -323,8 +324,8 @@ export function generateKitchenLayout(
 
       for (const iv of cookerViable) {
         const occupied = cabinets.filter((c) => c.wallId === wall.id && c.category !== 'top');
-        const startBound = iv.start + cornerDeductions[wall.id].startBase;
-        const endBound = iv.end - cornerDeductions[wall.id].endBase;
+        const startBound = Math.max(iv.start, cornerDeductions[wall.id].startBase);
+        const endBound = Math.min(iv.end, wall.length - cornerDeductions[wall.id].endBase);
 
         // Try candidate positions with landing space
         const step = 50;
@@ -379,8 +380,8 @@ export function generateKitchenLayout(
 
     // BASE FILL
     for (const iv of intervals.filter((i) => i.allowsBase)) {
-      const startLimit = iv.start + cornerDeductions[wall.id].startBase;
-      const endLimit = iv.end - cornerDeductions[wall.id].endBase;
+      const startLimit = Math.max(iv.start, cornerDeductions[wall.id].startBase);
+      const endLimit = Math.min(iv.end, wall.length - cornerDeductions[wall.id].endBase);
       if (endLimit <= startLimit) continue;
 
       // Occupied segments on this wall (base or tall)
@@ -407,8 +408,8 @@ export function generateKitchenLayout(
     // TOP / WALL CABINET FILL
     if (options.topCabinets) {
       for (const iv of intervals.filter((i) => i.allowsTop)) {
-        const startLimit = iv.start + cornerDeductions[wall.id].startTop;
-        const endLimit = iv.end - cornerDeductions[wall.id].endTop;
+        const startLimit = Math.max(iv.start, cornerDeductions[wall.id].startTop);
+        const endLimit = Math.min(iv.end, wall.length - cornerDeductions[wall.id].endTop);
         if (endLimit <= startLimit) continue;
 
         const occupied = cabinets

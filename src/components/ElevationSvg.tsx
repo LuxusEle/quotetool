@@ -18,10 +18,8 @@ export const ElevationSvg: React.FC<ElevationProps> = ({
   onSelectCabinet,
 }) => {
   // Perspective flip:
-  // For Wall A, internal perspective places corner with Wall B on the RIGHT, tall units on the LEFT.
-  // For Wall B, internal perspective places corner with Wall A on the LEFT, Wall C on the RIGHT.
-  // For Wall C, internal perspective places corner with Wall B on the LEFT, open room on the RIGHT.
-  const isWallA = wall.id === 'A';
+  // Standard View: x=0 is on the LEFT, matching user's 'From Left (mm)' input.
+  // Reverse View: flips perspective if user wants workshop back-view.
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
 
   const scale = 0.18; // mm to px
@@ -39,8 +37,8 @@ export const ElevationSvg: React.FC<ElevationProps> = ({
   const wallCabs = cabinets.filter((c) => c.wallId === wall.id);
 
   // Helper to calculate X coordinate based on perspective:
-  // Invert X for Wall A by default so Corner B is on the right, matching Iso and Plan interior perspective!
-  const invertX = isWallA ? !isFlipped : isFlipped;
+  // Standard view: from left (0 mm) to right (wall.length mm)
+  const invertX = isFlipped;
 
   const getScreenX = (posMm: number, widthMm: number) => {
     if (invertX) {
@@ -51,17 +49,17 @@ export const ElevationSvg: React.FC<ElevationProps> = ({
 
   const getPerspectiveLabel = () => {
     if (wall.id === 'A') {
-      return invertX
-        ? 'Room Interior View [Left: Open Room / Tall Units ➔ Right: Corner with Wall B]'
-        : 'Reverse Workshop View [Left: Corner with Wall B ➔ Right: Open Room / Tall Units]';
+      return !invertX
+        ? 'Standard View [Left: Corner with Wall B (0mm) ➔ Right: Far End / Tall Units]'
+        : 'Reverse View [Left: Far End / Tall Units ➔ Right: Corner with Wall B]';
     } else if (wall.id === 'B') {
       return !invertX
-        ? 'Room Interior View [Left: Corner Wall A ➔ Right: Wall C / Open End]'
-        : 'Reverse Workshop View [Left: Wall C / Open End ➔ Right: Corner Wall A]';
+        ? 'Standard View [Left: Corner Wall A (0mm) ➔ Right: Wall C / Open End]'
+        : 'Reverse View [Left: Wall C / Open End ➔ Right: Corner Wall A]';
     } else {
       return !invertX
-        ? 'Room Interior View [Left: Corner Wall B ➔ Right: Open Room End]'
-        : 'Reverse Workshop View [Left: Open Room End ➔ Right: Corner Wall B]';
+        ? 'Standard View [Left: Corner Wall B (0mm) ➔ Right: Open Room End]'
+        : 'Reverse View [Left: Open Room End ➔ Right: Corner Wall B]';
     }
   };
 

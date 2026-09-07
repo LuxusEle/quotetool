@@ -49,6 +49,8 @@ import {
   Maximize2,
   Printer,
   ChevronRight,
+  RotateCcw,
+  FilePlus,
 } from 'lucide-react';
 
 export default function CabinexStudio() {
@@ -111,42 +113,11 @@ export default function CabinexStudio() {
   });
 
   // Real-world Walls: Wall A is Main Left Run, Wall B is Rear Return, Wall C is Right Run
+  // Starts with clean empty room (no ghost obstacles from old projects)
   const [walls, setWalls] = useState<Wall[]>([
     { id: 'A', name: 'Wall A (Main)', length: 3650, height: 2743, openings: [] },
-    {
-      id: 'B',
-      name: 'Wall B (Return)',
-      length: 4200,
-      height: 2743,
-      openings: [
-        {
-          id: 'op-win-1',
-          wallId: 'B',
-          type: 'window',
-          distanceFromLeft: 1200,
-          width: 1500,
-          height: 1200,
-          sillHeight: 1050,
-        },
-      ],
-    },
-    {
-      id: 'C',
-      name: 'Wall C (Right)',
-      length: 3000,
-      height: 2743,
-      openings: [
-        {
-          id: 'op-door-1',
-          wallId: 'C',
-          type: 'door',
-          distanceFromLeft: 1800,
-          width: 900,
-          height: 2100,
-          sillHeight: 0,
-        },
-      ],
-    },
+    { id: 'B', name: 'Wall B (Return)', length: 4200, height: 2743, openings: [] },
+    { id: 'C', name: 'Wall C (Right)', length: 3000, height: 2743, openings: [] },
   ]);
 
   // Design Options
@@ -299,6 +270,7 @@ export default function CabinexStudio() {
       w.id === newOpening.wallId ? { ...w, openings: [...w.openings, op] } : w
     );
     setWalls(nextWalls);
+    setActiveWallId(newOpening.wallId);
     const { cabinets: newCabs } = generateKitchenLayout(nextWalls, options);
     setCabinets(newCabs);
   };
@@ -312,6 +284,77 @@ export default function CabinexStudio() {
     setWalls(nextWalls);
     const { cabinets: newCabs } = generateKitchenLayout(nextWalls, options);
     setCabinets(newCabs);
+  };
+
+  // Clear All Openings across all walls
+  const handleClearAllOpenings = () => {
+    const nextWalls = walls.map((w) => ({ ...w, openings: [] }));
+    setWalls(nextWalls);
+    const { cabinets: newCabs } = generateKitchenLayout(nextWalls, options);
+    setCabinets(newCabs);
+  };
+
+  // Clear room completely: removes all openings, all cabinets, and resets canvas
+  const handleClearRoom = () => {
+    const cleanWalls = walls.map((w) => ({ ...w, openings: [] }));
+    setWalls(cleanWalls);
+    setCabinets([]);
+    setCustomBOMItems([]);
+    setSelectedCabinet(null);
+  };
+
+  // Generate / Auto-Populate Cabinet Layout adapted to current walls & obstacles
+  const handleGenerateLayout = () => {
+    const { cabinets: newCabs } = generateKitchenLayout(walls, options);
+    setCabinets(newCabs);
+  };
+
+  // Start New Project & Clear Room completely
+  const handleNewProject = () => {
+    const newRef = `QT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    setProject((prev) => ({
+      ...prev,
+      id: `proj-${Date.now()}`,
+      refNumber: newRef,
+      revision: 0,
+      customerName: 'New Client',
+      mobile: '',
+      location: 'Colombo',
+      notes: '',
+      status: 'Draft',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }));
+
+    const cleanWalls: Wall[] = [
+      { id: 'A', name: 'Wall A (Main)', length: 3650, height: 2743, openings: [] },
+      { id: 'B', name: 'Wall B (Return)', length: 4200, height: 2743, openings: [] },
+      { id: 'C', name: 'Wall C (Right)', length: 3000, height: 2743, openings: [] },
+    ];
+    setWalls(cleanWalls);
+    setWallInputs({
+      A: '3650',
+      B: '4200',
+      C: '3000',
+      island: '1800',
+      roomHeight: '2743',
+      baseHeight: '870',
+      topBottomDatum: '1500',
+      tallTowerHeight: '2150',
+    });
+    setArchetype('L');
+    const defaultOptions: DesignOptions = {
+      ...options,
+      shape: 'L',
+      island: { ...options.island, enabled: false },
+    };
+    setOptions(defaultOptions);
+    setCabinets([]); // Room starts completely empty and clear!
+    setCustomBOMItems([]);
+    setSelectedCabinet(null);
+    setCurrentStep(1);
+    setActiveWallId('A');
+    setViewportMode('quad');
   };
 
   // Quick Add Module on active wall
@@ -431,6 +474,24 @@ ${cabinets
     URL.revokeObjectURL(url);
   };
 
+  const wallA = walls.find((w) => w.id === 'A') || walls[0];
+  const wallB =
+    walls.find((w) => w.id === 'B') || {
+      id: 'B' as WallId,
+      name: 'Wall B (Return)',
+      length: Number(wallInputs.B) || 4200,
+      height: Number(wallInputs.roomHeight) || 2743,
+      openings: [],
+    };
+  const wallC =
+    walls.find((w) => w.id === 'C') || {
+      id: 'C' as WallId,
+      name: 'Wall C (Right)',
+      length: Number(wallInputs.C) || 3000,
+      height: Number(wallInputs.roomHeight) || 2743,
+      openings: [],
+    };
+
   const activeWall =
     walls.find((w) => w.id === activeWallId) ||
     walls.find((w) => w.id === 'A') ||
@@ -444,8 +505,8 @@ ${cabinets
       <div className="w-[390px] bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0 select-none z-20 shadow-xl">
         <div className="flex flex-col h-full overflow-hidden">
           {/* Header Title & Branding */}
-          <div className="p-3.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2.5">
+          <div className="p-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-sky-600 flex items-center justify-center font-black text-white text-xs shadow-md shadow-sky-500/20">
                 LX
               </div>
@@ -460,6 +521,24 @@ ${cabinets
             </div>
 
             <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleNewProject}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow transition"
+                title="Start a new clean kitchen project"
+              >
+                <FilePlus className="w-3.5 h-3.5" />
+                <span>+ New</span>
+              </button>
+
+              <button
+                onClick={handleClearRoom}
+                className="flex items-center gap-1 px-2 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 rounded-lg text-xs font-bold transition"
+                title="Clear all cabinets and obstacles in current room"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Clear</span>
+              </button>
+
               <button
                 onClick={() => setIsOwnerModalOpen(true)}
                 className={`p-1.5 rounded-lg border text-xs transition ${
@@ -509,6 +588,38 @@ ${cabinets
             {/* ---------------------------------------------------- */}
             {currentStep === 1 && (
               <div className="space-y-4">
+                {/* Project Reset & Clear Room Controls */}
+                <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-white">Project: {project.refNumber}</div>
+                      <div className="text-[10px] text-slate-400">
+                        {cabinets.length > 0 ? `${cabinets.length} cabinets placed` : 'Clean empty room'}
+                      </div>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleClearRoom}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 rounded-lg text-xs font-bold transition"
+                        title="Clear all cabinets and openings"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Clear Room</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleGenerateLayout}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold transition shadow"
+                        title="Generate cabinet layout"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span>Generate</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <h3 className="text-xs font-bold uppercase text-sky-400 tracking-wider mb-2">
                     1. Layout Archetype
@@ -747,11 +858,23 @@ ${cabinets
 
                 {/* Openings List */}
                 <div className="space-y-2">
-                  <h4 className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
-                    Configured Obstacles:
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                      Configured Obstacles ({walls.flatMap((w) => w.openings).length}):
+                    </h4>
+                    {walls.flatMap((w) => w.openings).length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearAllOpenings}
+                        className="flex items-center gap-1 text-[10px] text-rose-400 hover:text-rose-300 font-semibold"
+                        title="Remove all obstacles from all walls"
+                      >
+                        <Trash2 className="w-3 h-3" /> Clear All
+                      </button>
+                    )}
+                  </div>
                   {walls.flatMap((w) => w.openings).length === 0 ? (
-                    <p className="text-xs text-slate-500 italic">No openings configured.</p>
+                    <p className="text-xs text-slate-500 italic">No openings configured. Room is clear.</p>
                   ) : (
                     walls.flatMap((w) =>
                       w.openings.map((op) => (
@@ -1178,69 +1301,87 @@ ${cabinets
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950">
         {/* Top Viewport Navigation Bar */}
         <div className="h-12 px-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0 text-xs">
-          {/* Viewport Quadrant Mode Selectors */}
-          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+          {/* Viewport Quadrant Mode Selectors & Quick Actions */}
+          <div className="flex items-center gap-1.5">
             <button
-              onClick={() => setViewportMode('quad')}
-              className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-bold transition ${
-                viewportMode === 'quad'
-                  ? 'bg-sky-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title="4-Part Quad Viewport (Top, Front, Bottom, Iso)"
+              onClick={handleNewProject}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow text-xs transition"
+              title="Start a new clean kitchen project"
             >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>4-Part Quad View</span>
+              <FilePlus className="w-3.5 h-3.5" />
+              <span>+ New Project</span>
             </button>
 
             <button
-              onClick={() => setViewportMode('top')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
-                viewportMode === 'top'
-                  ? 'bg-sky-600 text-white'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              onClick={handleClearRoom}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-rose-900/40 text-rose-300 border border-slate-700 hover:border-rose-500/40 rounded-lg text-xs font-semibold transition"
+              title="Clear all cabinets and obstacles in room"
             >
-              Top (Plan)
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Clear Room</span>
             </button>
 
             <button
-              onClick={() => setViewportMode('front')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
-                viewportMode === 'front'
-                  ? 'bg-sky-600 text-white'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              onClick={handleGenerateLayout}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-lg shadow-sm text-xs transition"
+              title="Generate cabinet modules fitting walls and openings"
             >
-              Front (Elevation)
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>⚡ Generate Layout</span>
             </button>
 
-            <button
-              onClick={() => setViewportMode('side')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
-                viewportMode === 'side'
-                  ? 'bg-sky-600 text-white'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Bottom / Side Profile
-            </button>
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+              <button
+                onClick={() => setViewportMode('quad')}
+                className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-bold transition ${
+                  viewportMode === 'quad'
+                    ? 'bg-sky-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="4-Part Quad Viewport (Wall A, Wall B, Wall C, 3D Iso)"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>4-Part (A, B, C, Iso)</span>
+              </button>
 
-            <button
-              onClick={() => setViewportMode('iso')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
-                viewportMode === 'iso'
-                  ? 'bg-sky-600 text-white'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              3D Iso
-            </button>
+              <button
+                onClick={() => setViewportMode('front')}
+                className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
+                  viewportMode === 'front'
+                    ? 'bg-sky-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Wall Elevation
+              </button>
+
+              <button
+                onClick={() => setViewportMode('top')}
+                className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
+                  viewportMode === 'top'
+                    ? 'bg-sky-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Top (Plan)
+              </button>
+
+              <button
+                onClick={() => setViewportMode('iso')}
+                className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
+                  viewportMode === 'iso'
+                    ? 'bg-sky-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                3D Iso
+              </button>
+            </div>
           </div>
 
           {/* Real-World Wall Selector (Strictly A, B, C, Island!) */}
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase">View Wall:</span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase">Wall:</span>
             <div className="flex gap-1">
               {(['A', 'B', 'C', 'I'] as const).map((wId) => {
                 if (wId === 'B' && options.shape === 'straight') return null;
@@ -1301,74 +1442,36 @@ ${cabinets
         {/* VIEWPORTS RENDER AREA                                  */}
         {/* ======================================================= */}
         <div className="flex-1 overflow-hidden p-3 bg-slate-950">
-          {/* --- QUAD VIEW MODE (4-PART CAD SPLIT VIEWPORT AUTO-UPDATING) --- */}
+          {/* --- QUAD VIEW MODE (4-PART: WALL A, WALL B, WALL C & 3D ISO) --- */}
           {viewportMode === 'quad' && (
             <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-2.5">
-              {/* QUAD 1: TOP / PLAN VIEW (Top-Left) */}
+              {/* QUAD 1: WALL A FRONT ELEVATION (Top-Left) */}
               <div
-                id="viewport-quad-top"
+                id="viewport-quad-wall-a"
                 className="relative flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow"
               >
                 <div className="px-3 py-1.5 bg-slate-950/90 border-b border-slate-800 flex justify-between items-center text-[10px] font-bold tracking-wider uppercase text-slate-400">
                   <span className="flex items-center gap-1.5 text-sky-400">
-                    <Compass className="w-3.5 h-3.5" /> 1. TOP VIEW (PLAN)
+                    <Eye className="w-3.5 h-3.5" /> 1. WALL A ELEVATION (MAIN RUN)
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-slate-400">
-                      A: {wallInputs.A}mm • B: {wallInputs.B}mm
+                      L: {wallA.length}mm • H: {project.wallHeight}mm
                     </span>
                     <button
-                      onClick={() => handleDownloadSvg('viewport-quad-top', `${project.refNumber}_Top_Plan.svg`)}
+                      onClick={() => handleDownloadSvg('viewport-quad-wall-a', `${project.refNumber}_Wall_A_Elevation.svg`)}
                       className="p-1 hover:text-white transition"
-                      title="Download Top Plan SVG"
+                      title="Download Wall A Elevation SVG"
                     >
                       <Download className="w-3 h-3" />
                     </button>
                     <button
-                      onClick={() => setViewportMode('top')}
+                      onClick={() => {
+                        setActiveWallId('A');
+                        setViewportMode('front');
+                      }}
                       className="p-1 hover:text-white transition"
-                      title="Maximize Top View"
-                    >
-                      <Maximize2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex-1 overflow-auto p-2 flex items-center justify-center">
-                  <PlanViewSvg
-                    walls={walls}
-                    cabinets={cabinets}
-                    shape={options.shape}
-                    island={options.island}
-                    selectedCabinetId={selectedCabinet?.id}
-                    onSelectCabinet={setSelectedCabinet}
-                  />
-                </div>
-              </div>
-
-              {/* QUAD 2: FRONT ELEVATION (Top-Right) */}
-              <div
-                id="viewport-quad-front"
-                className="relative flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow"
-              >
-                <div className="px-3 py-1.5 bg-slate-950/90 border-b border-slate-800 flex justify-between items-center text-[10px] font-bold tracking-wider uppercase text-slate-400">
-                  <span className="flex items-center gap-1.5 text-emerald-400">
-                    <Eye className="w-3.5 h-3.5" /> 2. FRONT ELEVATION (WALL {activeWall.id})
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-slate-400">
-                      L: {activeWall.length}mm • H: {project.wallHeight}mm
-                    </span>
-                    <button
-                      onClick={() => handleDownloadSvg('viewport-quad-front', `${project.refNumber}_Wall_${activeWall.id}_Elevation.svg`)}
-                      className="p-1 hover:text-white transition"
-                      title="Download Front Elevation SVG"
-                    >
-                      <Download className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => setViewportMode('front')}
-                      className="p-1 hover:text-white transition"
-                      title="Maximize Front Elevation"
+                      title="Maximize Wall A"
                     >
                       <Maximize2 className="w-3 h-3" />
                     </button>
@@ -1376,7 +1479,7 @@ ${cabinets
                 </div>
                 <div className="flex-1 overflow-auto p-2 flex items-center justify-center">
                   <ElevationSvg
-                    wall={activeWall}
+                    wall={wallA}
                     cabinets={cabinets}
                     selectedCabinetId={selectedCabinet?.id}
                     onSelectCabinet={setSelectedCabinet}
@@ -1384,42 +1487,115 @@ ${cabinets
                 </div>
               </div>
 
-              {/* QUAD 3: BOTTOM / SIDE SECTION PROFILE (Bottom-Left) */}
+              {/* QUAD 2: WALL B FRONT ELEVATION (Top-Right) */}
               <div
-                id="viewport-quad-side"
+                id="viewport-quad-wall-b"
                 className="relative flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow"
               >
                 <div className="px-3 py-1.5 bg-slate-950/90 border-b border-slate-800 flex justify-between items-center text-[10px] font-bold tracking-wider uppercase text-slate-400">
-                  <span className="flex items-center gap-1.5 text-purple-400">
-                    <Ruler className="w-3.5 h-3.5" /> 3. BOTTOM / SIDE PROFILE (SECTION)
+                  <span className="flex items-center gap-1.5 text-emerald-400">
+                    <Eye className="w-3.5 h-3.5" /> 2. WALL B ELEVATION (RETURN RUN)
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-slate-400">
-                      Base: 600mm • Wall: 305mm • Soffit: 430mm
+                      L: {wallB.length}mm • H: {project.wallHeight}mm
                     </span>
                     <button
-                      onClick={() => handleDownloadSvg('viewport-quad-side', `${project.refNumber}_Side_Profile.svg`)}
+                      onClick={() => handleDownloadSvg('viewport-quad-wall-b', `${project.refNumber}_Wall_B_Elevation.svg`)}
                       className="p-1 hover:text-white transition"
-                      title="Download Side Profile SVG"
+                      title="Download Wall B Elevation SVG"
                     >
                       <Download className="w-3 h-3" />
                     </button>
                     <button
-                      onClick={() => setViewportMode('side')}
+                      onClick={() => {
+                        setActiveWallId('B');
+                        setViewportMode('front');
+                      }}
                       className="p-1 hover:text-white transition"
-                      title="Maximize Side Profile"
+                      title="Maximize Wall B"
                     >
                       <Maximize2 className="w-3 h-3" />
                     </button>
                   </div>
                 </div>
                 <div className="flex-1 overflow-auto p-2 flex items-center justify-center">
-                  <SideProfileSvg
-                    project={project}
-                    options={options}
-                    baseHeightMm={Number(wallInputs.baseHeight) || 870}
-                    ceilingHeightMm={Number(wallInputs.roomHeight) || 2743}
+                  <ElevationSvg
+                    wall={wallB}
+                    cabinets={cabinets}
+                    selectedCabinetId={selectedCabinet?.id}
+                    onSelectCabinet={setSelectedCabinet}
                   />
+                </div>
+              </div>
+
+              {/* QUAD 3: WALL C ELEVATION / ISLAND (Bottom-Left) */}
+              <div
+                id="viewport-quad-wall-c"
+                className="relative flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow"
+              >
+                <div className="px-3 py-1.5 bg-slate-950/90 border-b border-slate-800 flex justify-between items-center text-[10px] font-bold tracking-wider uppercase text-slate-400">
+                  <span className="flex items-center gap-1.5 text-purple-400">
+                    <Eye className="w-3.5 h-3.5" /> 3. {options.shape === 'U' ? 'WALL C ELEVATION (RIGHT RUN)' : options.island.enabled ? 'ISLAND ELEVATION' : 'WALL C / TOP PLAN'}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-slate-400">
+                      {options.shape === 'U' ? `L: ${wallC.length}mm` : options.island.enabled ? `L: ${options.island.length}mm` : `A: ${wallA.length}mm`}
+                    </span>
+                    <button
+                      onClick={() => handleDownloadSvg('viewport-quad-wall-c', `${project.refNumber}_Zone_3.svg`)}
+                      className="p-1 hover:text-white transition"
+                      title="Download SVG"
+                    >
+                      <Download className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (options.shape === 'U') {
+                          setActiveWallId('C');
+                          setViewportMode('front');
+                        } else {
+                          setViewportMode('top');
+                        }
+                      }}
+                      className="p-1 hover:text-white transition"
+                      title="Maximize"
+                    >
+                      <Maximize2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-auto p-2 flex items-center justify-center">
+                  {options.shape === 'U' ? (
+                    <ElevationSvg
+                      wall={wallC}
+                      cabinets={cabinets}
+                      selectedCabinetId={selectedCabinet?.id}
+                      onSelectCabinet={setSelectedCabinet}
+                    />
+                  ) : options.island.enabled ? (
+                    <ElevationSvg
+                      wall={{
+                        id: 'I' as WallId,
+                        name: 'Island Unit',
+                        length: options.island.length,
+                        height: 870,
+                        openings: [],
+                      }}
+                      cabinets={cabinets}
+                      selectedCabinetId={selectedCabinet?.id}
+                      onSelectCabinet={setSelectedCabinet}
+                    />
+                  ) : (
+                    <PlanViewSvg
+                      walls={walls}
+                      cabinets={cabinets}
+                      shape={options.shape}
+                      island={options.island}
+                      selectedCabinetId={selectedCabinet?.id}
+                      onSelectCabinet={setSelectedCabinet}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -1433,7 +1609,7 @@ ${cabinets
                     <Layers className="w-3.5 h-3.5" /> 4. 3D ISO (AXONOMETRIC WIREFRAME)
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-slate-400">Assembly</span>
+                    <span className="font-mono text-slate-400">3D Assembly</span>
                     <button
                       onClick={() => handleDownloadSvg('viewport-quad-iso', `${project.refNumber}_3D_Iso.svg`)}
                       className="p-1 hover:text-white transition"
