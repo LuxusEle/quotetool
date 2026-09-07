@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { PricingSettings } from '@/types/kitchen';
-import { Shield, KeyRound, Save, X } from 'lucide-react';
+import { Shield, KeyRound, Save, X, Calculator, HelpCircle } from 'lucide-react';
 
 interface OwnerSettingsModalProps {
   isOpen: boolean;
@@ -50,7 +50,7 @@ export const OwnerSettingsModal: React.FC<OwnerSettingsModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/60">
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-sky-400" />
-            <h3 className="font-bold text-base">Owner Confidential Rates & Settings</h3>
+            <h3 className="font-bold text-base">Owner Confidential Rates & Pricing Engine</h3>
           </div>
           <button
             onClick={onClose}
@@ -67,9 +67,9 @@ export const OwnerSettingsModal: React.FC<OwnerSettingsModalProps> = ({
               <KeyRound className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-lg text-white">Confidential Area</h4>
+              <h4 className="font-bold text-lg text-white">Confidential Owner Area</h4>
               <p className="text-xs text-slate-400 mt-1">
-                Enter your Owner PIN to access confidential fabricator rates, margin calculations, and quotation defaults.
+                Enter your Owner PIN to access confidential fabricator rates, higher-price selling formulas, and quotation defaults.
               </p>
             </div>
             <div className="max-w-xs mx-auto space-y-2">
@@ -97,12 +97,30 @@ export const OwnerSettingsModal: React.FC<OwnerSettingsModalProps> = ({
           <div className="p-6 max-h-[80vh] overflow-y-auto space-y-6">
             {/* Section 1: Internal Fabricator Costs */}
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-sky-400 mb-3">
-                1. Confidential Fabricator Costs (LKR)
+              <h4 className="text-xs font-bold uppercase tracking-wider text-sky-400 mb-3 flex items-center justify-between">
+                <span>1. Confidential Fabricator Costs (LKR)</span>
+                <span className="text-[10px] text-slate-400 lowercase font-normal">Internal only</span>
               </h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Base Cabinet Cost / LF</label>
+                  <label className="text-xs text-slate-400 block mb-1">Cabinet Structure Type</label>
+                  <select
+                    value={form.cabinetType || 'full_box'}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        cabinetType: e.target.value as 'full_box' | 'bottom_frame',
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white"
+                  >
+                    <option value="full_box">Full-Box Cabinets (LKR 15,500 / ft)</option>
+                    <option value="bottom_frame">Bottom Frame (LKR 13,500 / ft)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Full-Box Cabinet Cost / LF</label>
                   <input
                     type="number"
                     value={form.baseInternalRatePerLF}
@@ -112,28 +130,19 @@ export const OwnerSettingsModal: React.FC<OwnerSettingsModalProps> = ({
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm"
                   />
                 </div>
+
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Top Cabinet Cost / LF</label>
+                  <label className="text-xs text-slate-400 block mb-1">Bottom Frame Cost / LF</label>
                   <input
                     type="number"
-                    value={form.topInternalRatePerLF}
+                    value={form.bottomFrameInternalRatePerLF || 13500}
                     onChange={(e) =>
-                      setForm({ ...form, topInternalRatePerLF: Number(e.target.value) })
+                      setForm({ ...form, bottomFrameInternalRatePerLF: Number(e.target.value) })
                     }
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm"
                   />
                 </div>
-                <div>
-                  <label className="text-xs text-slate-400 block mb-1">Tall Cabinet Cost / LF</label>
-                  <input
-                    type="number"
-                    value={form.tallInternalRatePerLF}
-                    onChange={(e) =>
-                      setForm({ ...form, tallInternalRatePerLF: Number(e.target.value) })
-                    }
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm"
-                  />
-                </div>
+
                 <div>
                   <label className="text-xs text-slate-400 block mb-1">Granite Worktop / Sq Ft</label>
                   <input
@@ -145,24 +154,26 @@ export const OwnerSettingsModal: React.FC<OwnerSettingsModalProps> = ({
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm"
                   />
                 </div>
+
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Wiring & Plumbing / LF</label>
+                  <label className="text-xs text-slate-400 block mb-1">Plumbing + Electrical (Fixed LKR)</label>
                   <input
                     type="number"
-                    value={form.servicesRatePerLF}
+                    value={form.servicesFixedCost}
                     onChange={(e) =>
-                      setForm({ ...form, servicesRatePerLF: Number(e.target.value) })
+                      setForm({ ...form, servicesFixedCost: Number(e.target.value) })
                     }
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm"
                   />
                 </div>
+
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Services Max Cap (LKR)</label>
+                  <label className="text-xs text-slate-400 block mb-1">Transport (Fixed LKR)</label>
                   <input
                     type="number"
-                    value={form.servicesMaxCap}
+                    value={form.transportFixedCost}
                     onChange={(e) =>
-                      setForm({ ...form, servicesMaxCap: Number(e.target.value) })
+                      setForm({ ...form, transportFixedCost: Number(e.target.value) })
                     }
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm"
                   />
@@ -170,54 +181,63 @@ export const OwnerSettingsModal: React.FC<OwnerSettingsModalProps> = ({
               </div>
             </div>
 
-            {/* Section 2: Customer Selling Rates */}
+            {/* Section 2: Higher-Price Selling Calculation Rules */}
             <div className="pt-4 border-t border-slate-800">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-3">
-                2. Client Selling Rates (LKR)
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                  <Calculator className="w-3.5 h-3.5" />
+                  2. Selling-Price Rules (Higher-Price Rule)
+                </h4>
+                <span className="text-[10px] text-emerald-400/80 font-mono">max(Option A, Option B)</span>
+              </div>
+
+              <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl mb-3 text-xs text-slate-400 space-y-1">
+                <p>
+                  <span className="font-semibold text-slate-200">Option A:</span> Total Fabricator Cost × Multiplier (e.g. 1.35)
+                </p>
+                <p>
+                  <span className="font-semibold text-slate-200">Option B:</span> Total Fabricator Cost + Fixed Markup (e.g. LKR 200,000)
+                </p>
+                <p className="text-emerald-400 text-[11px] font-medium pt-1">
+                  The system automatically compares Option A vs Option B, selects whichever is higher, and rounds cleanly for the customer quotation.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Base Cabinet Sell / LF</label>
+                  <label className="text-xs text-slate-400 block mb-1">Option A Multiplier</label>
                   <input
                     type="number"
-                    value={form.baseSellingRatePerLF}
+                    step="0.01"
+                    value={form.markupMultiplier || 1.35}
                     onChange={(e) =>
-                      setForm({ ...form, baseSellingRatePerLF: Number(e.target.value) })
+                      setForm({ ...form, markupMultiplier: Number(e.target.value) })
                     }
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm font-mono text-emerald-400"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Top Cabinet Sell / LF</label>
+                  <label className="text-xs text-slate-400 block mb-1">Option B Fixed Markup (LKR)</label>
                   <input
                     type="number"
-                    value={form.topSellingRatePerLF}
+                    step="10000"
+                    value={form.fixedMarkupAddition || 200000}
                     onChange={(e) =>
-                      setForm({ ...form, topSellingRatePerLF: Number(e.target.value) })
+                      setForm({ ...form, fixedMarkupAddition: Number(e.target.value) })
                     }
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm font-mono text-emerald-400"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Tall Cabinet Sell / LF</label>
+                  <label className="text-xs text-slate-400 block mb-1">Clean Rounding (LKR)</label>
                   <input
                     type="number"
-                    value={form.tallSellingRatePerLF}
+                    step="1000"
+                    value={form.roundingIncrement || 5000}
                     onChange={(e) =>
-                      setForm({ ...form, tallSellingRatePerLF: Number(e.target.value) })
+                      setForm({ ...form, roundingIncrement: Number(e.target.value) })
                     }
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400 block mb-1">Granite Sell / Sq Ft</label>
-                  <input
-                    type="number"
-                    value={form.graniteSellingRatePerSqFt}
-                    onChange={(e) =>
-                      setForm({ ...form, graniteSellingRatePerSqFt: Number(e.target.value) })
-                    }
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm font-mono text-emerald-400"
                   />
                 </div>
               </div>
@@ -226,7 +246,7 @@ export const OwnerSettingsModal: React.FC<OwnerSettingsModalProps> = ({
             {/* Section 3: Terms & Banking */}
             <div className="pt-4 border-t border-slate-800">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-                3. Quotation Terms Defaults
+                3. Customer Quotation Terms Defaults
               </h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>

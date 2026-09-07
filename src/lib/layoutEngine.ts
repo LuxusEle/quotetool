@@ -107,10 +107,13 @@ export function generateKitchenLayout(
 
   const activeWallIds: WallId[] =
     options.shape === 'straight'
-      ? ['B']
+      ? ['A']
       : options.shape === 'L'
       ? ['A', 'B']
       : ['A', 'B', 'C'];
+  if (options.island.enabled && !activeWallIds.includes('I')) {
+    activeWallIds.push('I');
+  }
 
   const activeWalls = walls.filter((w) => activeWallIds.includes(w.id));
 
@@ -142,7 +145,7 @@ export function generateKitchenLayout(
 
   // --- 1. SINK PLACEMENT ---
   let sinkPlaced = lockedCabinets.some((c) => c.type === 'sink');
-  let targetSinkWallId: WallId = 'B';
+  let targetSinkWallId: WallId = activeWallIds[0];
 
   if (!sinkPlaced && options.sink) {
     if (options.sinkWall !== 'auto' && options.sinkWall !== 'I') {
@@ -157,7 +160,7 @@ export function generateKitchenLayout(
       if (wallWithWindow) {
         targetSinkWallId = wallWithWindow.id;
       } else {
-        targetSinkWallId = activeWallIds.includes('B') ? 'B' : activeWallIds[0];
+        targetSinkWallId = activeWallIds[0];
       }
     }
 

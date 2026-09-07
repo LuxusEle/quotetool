@@ -1,4 +1,4 @@
-// Core types for LUXUS Aluminium Kitchen Quote Designer
+// Core types for LUXUS Aluminium Kitchen Quote Designer (Cabinex Studio)
 
 export type KitchenShape = 'straight' | 'L' | 'U';
 
@@ -22,6 +22,8 @@ export interface Wall {
   openings: Opening[];
 }
 
+export type DrawerFitting = 'cutlery' | 'cup_saucer' | 'plate_rack' | 'bottle_holder';
+
 export type CabinetType =
   | 'base'
   | 'drawer'
@@ -43,13 +45,27 @@ export interface Cabinet {
   type: CabinetType;
   category: 'base' | 'top' | 'tall';
   startMm: number; // position from left of wall in mm
-  widthMm: number;
-  depthMm: number;
-  heightMm: number;
-  chargeWidthMm: number; // actual linear feet charge basis (e.g. deductions on corner overlaps)
-  locked: boolean;
+  widthMm: number; // 300, 450, 600, 900, etc.
+  depthMm: number; // 600 for base, 350 for top
+  heightMm: number; // 870 for base, 700 for top, 2150 for tall
+  chargeWidthMm: number; // used for linear-foot billing
   label: string;
   notes?: string;
+  locked?: boolean;
+  drawerFittings?: DrawerFitting[];
+  hasGlassDoor?: boolean;
+}
+
+export interface BOMItem {
+  id: string;
+  code: string;
+  name: string;
+  category: 'profiles' | 'fittings' | 'hardware' | 'countertop' | 'consumables' | 'custom';
+  quantity: number;
+  unit: string;
+  unitCost: number;
+  totalCost: number;
+  isCustom?: boolean;
 }
 
 export interface IslandConfig {
@@ -65,7 +81,7 @@ export interface IslandConfig {
 export interface DesignOptions {
   shape: KitchenShape;
   sink: boolean;
-  sinkWall: 'auto' | 'A' | 'B' | 'C' | 'I';
+  sinkWall: WallId | 'auto';
   cooker: boolean;
   cookerWidth: 600 | 900;
   hood: boolean;
@@ -75,9 +91,11 @@ export interface DesignOptions {
   tallPantryWidth: number;
   island: IslandConfig;
   topCabinets: boolean;
+  highSoffitCabinets?: boolean; // High overhead tier matching shop drawing
   granite: boolean;
   electricalPlumbing: boolean;
   finish: string; // e.g. 'Matte Black Anodized Aluminium', 'Champagne Gold', 'Dark Bronze', 'Pure White'
+  drawerBankFittings?: DrawerFitting[];
 }
 
 export interface ProjectDetails {
@@ -96,25 +114,23 @@ export interface ProjectDetails {
 
 export interface PricingSettings {
   // Confidential Fabricator Cost rates (LKR)
-  baseInternalRatePerLF: number; // 15500
-  topInternalRatePerLF: number;  // 15500
-  tallInternalRatePerLF: number; // 15500
-  graniteInternalRatePerSqFt: number; // 300
-  servicesRatePerLF: number;     // 1200
-  servicesMaxCap: number;        // 50000
-  serviceCalcBasis: 'unique_run' | 'total_lf'; // default 'unique_run'
+  cabinetType: 'full_box' | 'bottom_frame';
+  baseInternalRatePerLF: number;        // 15500 (full box) or 13500 (bottom frame)
+  bottomFrameInternalRatePerLF: number; // 13500
+  topInternalRatePerLF: number;         // 15500
+  tallInternalRatePerLF: number;        // 15500
+  graniteInternalRatePerSqFt: number;   // 3000 (LKR 3,000 / sq.ft)
+  servicesFixedCost: number;            // 50000 (Fixed LKR 50,000)
+  transportFixedCost: number;           // 7000 (Fixed LKR 7,000)
 
-  // Customer Selling Rates (LKR)
-  baseSellingRatePerLF: number; // e.g. 24500
-  topSellingRatePerLF: number;  // e.g. 22500
-  tallSellingRatePerLF: number; // e.g. 29500
-  graniteSellingRatePerSqFt: number; // e.g. 1450
-  servicesSellingRatePerLF: number;  // e.g. 1800
-  servicesSellingMaxCap: number;     // e.g. 75000
+  // Client Selling Price Rules (Higher-Price Rule)
+  markupMultiplier: number;             // Option A: Cost * 1.35 (default 1.35)
+  fixedMarkupAddition: number;          // Option B: Cost + 200,000 (default 200000)
+  roundingIncrement: number;            // Clean rounding increment (e.g. 5000 or 10000)
 
   // Quotation Defaults
   advancePercent: number; // 85%
-  leadTimeDays: number; // 21 days
+  leadTimeDays: number;   // 21 days
   bankDetails: string;
 }
 
@@ -126,7 +142,7 @@ export interface CalculatedPricing {
   uniqueRunLF: number;
   graniteSqFt: number;
 
-  // Internal Cost Breakdown (Owner only)
+  // Confidential Fabricator Cost Breakdown (Owner only)
   fabricatorCost: {
     baseCost: number;
     topCost: number;
@@ -134,19 +150,26 @@ export interface CalculatedPricing {
     cabinetsTotal: number;
     graniteCost: number;
     servicesCost: number;
+    transportCost: number;
     totalCost: number;
   };
 
-  // Customer Quotation Pricing
+  // Selling Price Calculation (Option A vs Option B Higher Price Rule)
+  sellingCalculation: {
+    optionACostMarkup: number;
+    optionBFixedAddition: number;
+    higherRuleChosen: 'Option A (Cost × Multiplier)' | 'Option B (Cost + Fixed Markup)';
+    unroundedPrice: number;
+    cleanRoundedPrice: number;
+  };
+
+  // Customer Quotation Pricing (One clean client-facing amount)
   customerPrice: {
-    baseSell: number;
-    topSell: number;
-    tallSell: number;
-    cabinetsSellTotal: number;
-    graniteSell: number;
-    servicesSell: number;
     grandTotal: number;
   };
+
+  // Manufacturing Bill of Materials (BOM)
+  bomItems: BOMItem[];
 
   // Owner Margin Analysis
   grossProfit: number;

@@ -186,7 +186,7 @@ export const FabricationSheet: React.FC<FabricationSheetProps> = ({
                   LKR {pricing.fabricatorCost.totalCost.toLocaleString()}
                 </p>
                 <p className="text-[10px] text-amber-800">
-                  Base ({pricing.baseLF} LF @ 15,500) + Top ({pricing.topLF} LF @ 15,500) + Tall ({pricing.tallLF} LF @ 15,500)
+                  Cabinets (LKR {pricing.fabricatorCost.cabinetsTotal.toLocaleString()}) + Granite (LKR {pricing.fabricatorCost.graniteCost.toLocaleString()}) + Services (LKR {pricing.fabricatorCost.servicesCost.toLocaleString()}) + Transport (LKR {pricing.fabricatorCost.transportCost.toLocaleString()})
                 </p>
               </div>
             )}
